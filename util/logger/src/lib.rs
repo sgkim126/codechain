@@ -27,9 +27,13 @@ extern crate time;
 
 mod logger;
 mod macros;
+mod metric;
 mod structured_logger;
 
+use std::time::Instant;
+
 use log::SetLoggerError;
+use metric::Metric;
 
 pub use logger::Config as LoggerConfig;
 use logger::Logger;
@@ -48,4 +52,26 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref slogger: StructuredLogger = StructuredLogger::create();
+}
+
+lazy_static! {
+    pub static ref metric_logger: Metric = Default::default();
+}
+
+pub fn metric(key: &'static str) -> MetricStart {
+    MetricStart {
+        key,
+        start: Instant::now(),
+    }
+}
+
+pub struct MetricStart {
+    key: &'static str,
+    start: Instant,
+}
+
+impl Drop for MetricStart {
+    fn drop(&mut self) {
+        metric_logger.add(self.key, Instant::now() - self.start);
+    }
 }
