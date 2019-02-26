@@ -204,7 +204,7 @@ impl Handler {
             let initiator_port = self.socket_address.port();
             let con =
                 OutgoingConnection::new(stream, initiator_pub_key, self.network_id, initiator_port, socket_address)?;
-            let token = self.outgoing_tokens.lock().gen().ok_or("Too many outgoing connections")?;
+            let token = self.outgoing_tokens.lock().gen().ok_or(format!("Too many outgoing connections: {}", outgoing_connections.len()))?;
             let t = outgoing_connections.insert(token, con);
             assert!(t.is_none());
             io.register_stream(token);
@@ -499,7 +499,7 @@ impl IoHandler<Message> for Handler {
                         cwarn!(NETWORK, "P2P connection request from {} is received. But it's not allowed", ip);
                         return Ok(())
                     }
-                    let token = self.incoming_tokens.lock().gen().ok_or("Too many incomming connections")?;
+                    let token = self.incoming_tokens.lock().gen().ok_or(format!("Too many incoming connections: {}", incoming_connections.len()))?;
                     // Please make sure there is no early return after it.
                     let t = incoming_connections.insert(token, IncomingConnection::new(stream));
                     assert!(t.is_none());
@@ -671,6 +671,7 @@ impl IoHandler<Message> for Handler {
                                 .routing_table
                                 .set_recipient_establish2(from, recipient_pub_key, initiator_pub_key)?
                             {
+                                cinfo!(NETWORK, "Send ack to {}", from);
                                 con.send_ack(local_public, encrypted_nonce);
                                 let t = self
                                     .establishing_incoming_session
@@ -681,6 +682,7 @@ impl IoHandler<Message> for Handler {
                                 should_update.store(false, Ordering::SeqCst);
                                 io.deregister_stream(stream_token);
                             } else {
+                                cinfo!(NETWORK, "Send nack to {}", from);
                                 io.clear_timer(wait_sync_timer(stream_token));
                                 con.send_nack();
                             }
