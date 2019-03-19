@@ -16,6 +16,7 @@
 
 use std::collections::HashMap;
 
+use clogger::metric;
 use kvdb::{DBTransaction, KeyValueDB};
 use primitives::H256;
 use rlp::Encodable;
@@ -31,12 +32,14 @@ pub fn backup_batch_with_capacity(length: usize) -> DBTransaction {
 }
 
 pub fn backup_item(batch: &mut DBTransaction, key: H256, item: &MemPoolItem) {
+    let _m = metric("backup_item");
     let mut db_key = PREFIX_ITEM.to_vec();
     db_key.extend_from_slice(key.as_ref());
     batch.put(dblib::COL_MEMPOOL, db_key.as_ref(), item.rlp_bytes().as_ref());
 }
 
 pub fn remove_item(batch: &mut DBTransaction, key: &H256) {
+    let _m = metric("remove_item");
     let mut db_key = PREFIX_ITEM.to_vec();
     db_key.extend_from_slice(key.as_ref());
     batch.delete(dblib::COL_MEMPOOL, db_key.as_ref());

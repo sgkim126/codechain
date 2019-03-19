@@ -19,6 +19,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ops::Range;
 use std::sync::Arc;
 
+use clogger::metric;
 use ckey::{public_to_address, Public};
 use ctypes::errors::{HistoryError, RuntimeError, SyntaxError};
 use ctypes::BlockNumber;
@@ -145,6 +146,7 @@ impl MemPool {
 
     /// Enforce the limit to the current/future queue
     fn enforce_limit(&mut self, batch: &mut DBTransaction) {
+        let _m = metric("MemPool::enforce_limit");
         // Get transaction orders to drop from each queue (current/future)
         fn get_orders_to_drop(
             set: &BTreeSet<TransactionOrder>,
@@ -246,6 +248,7 @@ impl MemPool {
     ) -> Vec<Result<TransactionImportResult, Error>>
     where
         F: Fn(&Public) -> AccountDetails, {
+        let _m = metric("MemPool::add");
         ctrace!(MEM_POOL, "add() called, time: {}, timestamp: {}", inserted_block_number, inserted_timestamp);
         let mut insert_results = Vec::new();
         let mut to_insert: HashMap<Public, Vec<u64>> = HashMap::new();
@@ -368,6 +371,7 @@ impl MemPool {
         assert_eq!(self.current.fee_counter.values().sum::<usize>(), self.current.len());
         assert_eq!(self.by_signer_public.len(), self.by_hash.len());
 
+        let _m = metric("MemPool::add - db.write");
         self.db.write(batch).expect("Low level database error. Some issue with disk?");
         insert_results
             .into_iter()
@@ -615,6 +619,7 @@ impl MemPool {
         current_block_number: PoolingInstant,
         current_timestamp: u64,
     ) -> u64 {
+        let _m = metric("MemPool::check_transactions");
         let row = self
             .by_signer_public
             .row(&public)
@@ -733,6 +738,7 @@ impl MemPool {
         to_local: bool,
         batch: &mut DBTransaction,
     ) {
+        let _m = metric("MemPool::update_orders");
         let row = self
             .by_signer_public
             .row_mut(&public)
@@ -784,6 +790,7 @@ impl MemPool {
         origin: TxOrigin,
         client_account: &AccountDetails,
     ) -> Result<(), Error> {
+        let _m = metric("MemPool::verify_transaction");
         if origin != TxOrigin::Local && tx.fee < self.minimal_fee {
             ctrace!(
                 MEM_POOL,
