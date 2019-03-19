@@ -255,6 +255,7 @@ impl MemPool {
         let mut new_local_accounts = HashSet::new();
         let mut batch = backup::backup_batch_with_capacity(inputs.len());
 
+        let m = metric("Inserts");
         for input in inputs {
             let tx = input.transaction;
             let signer_public = tx.signer_public();
@@ -308,9 +309,11 @@ impl MemPool {
             to_insert.entry(signer_public).or_default().push(seq);
             insert_results.push(Ok((signer_public, seq)));
         }
+        drop(m);
 
         let keys = self.by_signer_public.keys().map(Clone::clone).collect::<Vec<_>>();
 
+        let m = metric("check transactions");
         for public in keys {
             let current_seq = fetch_account(&public).seq;
             let mut first_seq = *self.first_seqs.get(&public).unwrap_or(&0);
@@ -361,6 +364,7 @@ impl MemPool {
                 self.is_local_account.remove(&public);
             }
         }
+        drop(m);
 
         self.enforce_limit(&mut batch);
 
@@ -647,6 +651,7 @@ impl MemPool {
         current_block_number: PoolingInstant,
         current_timestamp: u64,
     ) -> Option<u64> {
+        let _m = metric("MemPool::check_new_transactions");
         let row = self
             .by_signer_public
             .row(&public)
@@ -673,6 +678,7 @@ impl MemPool {
     /// Moves the transactions which of seq is in [start_seq, end_seq -1],
     /// to the given queue `to`.
     fn move_queue(&mut self, public: Public, mut start_seq: u64, end_seq: u64, to: QueueTag) {
+        let _m = metric("MemPool::move_queue");
         let row = self
             .by_signer_public
             .row_mut(&public)
@@ -704,6 +710,7 @@ impl MemPool {
     /// Add the given transactions to the corresponding queue.
     /// It should be tagged as QueueTag::New in self.by_signer_public.
     fn add_new_orders_to_queue(&mut self, public: Public, seq_list: &[u64], new_next_seq: u64) {
+        let _m = metric("MemPool::add_new_orders_to_queue");
         let row = self
             .by_signer_public
             .row_mut(&public)
