@@ -82,10 +82,11 @@ impl MetricInner {
         println!("Metric at : {}", timestamp);
         for (k, v) in self.table.iter_mut().filter(|(_, v)| !v.times.is_empty()) {
             {
-                let average: Duration = v.times.iter().sum::<Duration>() / v.times.len() as u32;
+                let total: Duration = v.times.iter().sum::<Duration>();
+                let average = total / v.times.len() as u32;
                 let max = v.times.iter().max().unwrap();
                 let min = v.times.iter().min().unwrap();
-                println!("{}: average: {:?} max: {:?} min: {:?}. {:?}", k, average, max, min, v.times);
+                println!("{}: total: {:?} average: {:?} max: {:?} min: {:?} count: {}", k, total, average, max, min, v.times.len());
             }
             v.reset_prev();
         }
