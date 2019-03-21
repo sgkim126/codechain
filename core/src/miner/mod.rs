@@ -32,7 +32,8 @@ use ctypes::{BlockHash, TxHash};
 use cvm::ChainTimeInfo;
 use primitives::Bytes;
 
-pub use self::mem_pool_types::MemPoolFees;
+pub use self::mem_pool::MemPool;
+pub use self::mem_pool_types::{AccountDetails, MemPoolFees, MemPoolInput, PoolingInstant, TxOrigin, TxTimelock};
 pub use self::miner::{AuthoringParams, Miner, MinerOptions};
 pub use self::stratum::{Config as StratumConfig, Error as StratumError, Stratum};
 use crate::account_provider::{AccountProvider, Error as AccountProviderError};
@@ -188,6 +189,3 @@ pub enum TransactionImportResult {
     /// Transaction was imported to future queue.
     Future,
 }
-
-#[cfg(all(feature = "nightly", test))]
-mod mem_pool_benches;

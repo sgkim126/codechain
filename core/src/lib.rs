@@ -92,7 +92,10 @@ pub use crate::client::{
 pub use crate::consensus::{EngineType, TimeGapParams};
 pub use crate::db::{COL_STATE, NUM_COLUMNS};
 pub use crate::error::{BlockImportError, Error, ImportError};
-pub use crate::miner::{MemPoolFees, Miner, MinerOptions, MinerService, Stratum, StratumConfig, StratumError};
+pub use crate::miner::{
+    AccountDetails, MemPool, MemPoolFees, MemPoolInput, Miner, MinerOptions, MinerService, PoolingInstant, Stratum,
+    StratumConfig, StratumError, TxOrigin, TxTimelock,
+};
 pub use crate::scheme::Scheme;
 pub use crate::service::ClientService;
 pub use crate::transaction::{
