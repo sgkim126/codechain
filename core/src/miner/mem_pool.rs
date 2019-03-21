@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ops::Range;
 use std::sync::Arc;
@@ -440,7 +441,7 @@ impl MemPool {
         let mut max_insertion_id = 0u64;
         let mut to_insert: HashMap<_, Vec<_>> = HashMap::new();
 
-        for (hash, item) in by_hash.iter() {
+        for (hash, item) in by_hash.into_iter() {
             let signer_public = item.signer_public();
             let seq = item.seq();
             let client_account = fetch_account(&signer_public);
@@ -452,10 +453,11 @@ impl MemPool {
             let order = TransactionOrder::for_transaction(&item, client_account.seq);
             let order_with_tag = TransactionOrderWithTag::new(order, QueueTag::New);
 
-            self.by_hash.insert((*hash).into(), item.clone());
+            let origin = item.origin;
+            self.by_hash.insert((*hash).into(), item);
 
             self.by_signer_public.insert(signer_public, seq, order_with_tag);
-            if item.origin == TxOrigin::Local {
+            if origin == TxOrigin::Local {
                 self.is_local_account.insert(signer_public);
             }
             to_insert.entry(signer_public).or_default().push(seq);
@@ -513,7 +515,8 @@ impl MemPool {
         let mut batch = backup::backup_batch_with_capacity(transaction_hashes.len());
 
         for hash in transaction_hashes {
-            if let Some(item) = self.by_hash.get(hash).map(Clone::clone) {
+            if let Entry::Occupied(entry) = self.by_hash.entry(*hash) {
+                let item = entry.remove();
                 let signer_public = item.signer_public();
                 let seq = item.seq();
                 let current_seq = fetch_seq(&signer_public);
@@ -529,7 +532,6 @@ impl MemPool {
                     QueueTag::New => unreachable!(),
                 }
 
-                self.by_hash.remove(hash);
                 backup::remove_item(&mut batch, hash);
                 self.by_signer_public.remove(&signer_public, &seq);
                 if current_seq <= seq {
@@ -733,36 +735,37 @@ impl MemPool {
         let seqs = row.keys().map(Clone::clone).collect::<Vec<_>>();
 
         for seq in seqs {
-            let order_with_tag = *row.get(&seq).expect("Must exist");
-            let old_order = order_with_tag.order;
+            let mut entry = if let Entry::Occupied(entry) = row.entry(seq) {
+                entry
+            } else {
+                unreachable!("Must exist");
+            };
+
+            let mut order = entry.get().order;
 
             // Remove old order
-            match order_with_tag.tag {
-                QueueTag::Current => self.current.remove(&old_order),
-                QueueTag::Future => self.future.remove(&old_order),
+            match entry.get().tag {
+                QueueTag::Current => self.current.remove(&order),
+                QueueTag::Future => self.future.remove(&order),
                 QueueTag::New => continue,
             }
-            row.remove(&seq);
 
             if seq < current_seq {
-                self.by_hash.remove(&old_order.hash);
-                backup::remove_item(batch, &old_order.hash);
+                self.by_hash.remove(&order.hash);
+                backup::remove_item(batch, &order.hash);
+                entry.remove();
             } else {
-                let new_order = old_order.update_height(seq, current_seq);
-                let new_order = if to_local {
-                    new_order.change_origin(TxOrigin::Local)
-                } else {
-                    new_order
-                };
-                if seq < new_next_seq {
-                    let new_order_with_tag = TransactionOrderWithTag::new(new_order, QueueTag::Current);
-                    self.current.insert(new_order);
-                    row.insert(seq, new_order_with_tag);
-                } else {
-                    let new_order_with_tag = TransactionOrderWithTag::new(new_order, QueueTag::Future);
-                    self.future.insert(new_order);
-                    row.insert(seq, new_order_with_tag);
+                order.update_height(seq, current_seq);
+                if to_local {
+                    order.update_origin(TxOrigin::Local);
                 }
+                *entry.get_mut() = if seq < new_next_seq {
+                    self.current.insert(order);
+                    TransactionOrderWithTag::new(order, QueueTag::Current)
+                } else {
+                    self.future.insert(order);
+                    TransactionOrderWithTag::new(order, QueueTag::Future)
+                };
             }
         }
     }

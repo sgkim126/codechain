@@ -147,14 +147,12 @@ impl TransactionOrder {
         }
     }
 
-    pub fn update_height(mut self, seq: u64, base_seq: u64) -> Self {
+    pub fn update_height(&mut self, seq: u64, base_seq: u64) {
         self.seq_height = seq - base_seq;
-        self
     }
 
-    pub fn change_origin(mut self, origin: TxOrigin) -> Self {
+    pub fn update_origin(&mut self, origin: TxOrigin) {
         self.origin = origin;
-        self
     }
 }
 
