@@ -24,6 +24,7 @@ jobs:
         - cargo build
         - cd test && yarn
       script:
+        - ./node_modules/.bin/tsc -p .
         - yarn start-short
         - yarn start-long
       after_failure:
@@ -42,6 +43,7 @@ jobs:
         - cargo build
         - cd test && yarn
       script:
+        - ./node_modules/.bin/tsc -p .
         - yarn start-short
         - yarn start-long
       after_failure:
@@ -59,6 +61,7 @@ jobs:
         - cargo build --verbose
         - cd test && yarn
       script:
+        - ./node_modules/.bin/tsc -p .
         - yarn start-dyn-val-1
       after_failure:
         - ./upload_logs.sh
@@ -75,6 +78,7 @@ jobs:
         - cargo build --verbose
         - cd test && yarn
       script:
+        - ./node_modules/.bin/tsc -p .
         - yarn start-dyn-val-2
       after_failure:
         - ./upload_logs.sh
