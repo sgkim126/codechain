@@ -71,9 +71,7 @@ describe("Shutdown test", function() {
                 { signer: validators[6], delegation: 1, deposit: 100000 }
             ],
             async onBeforeEnable(allNodes) {
-                for (const node of getBetas(allNodes).nodes) {
-                    await node.clean();
-                }
+                await Promise.all(getBetas(allNodes).nodes.map(node => node.clean()));
             }
         });
 
@@ -181,15 +179,9 @@ describe("Shutdown test", function() {
                 );
                 const possibleAuthors = (await stake.getPossibleAuthors(
                     getObserver().node.sdk
-                ))!;
-                expect(getAlphas().addrs).to.include.members(
-                    possibleAuthors.map(x => x.toString()),
-                    "All validators are alphas"
-                );
-                expect(getBetas().addrs).not.to.include(
-                    possibleAuthors.map(x => x.toString()),
-                    "But not betas"
-                );
+                ))!.map(x => x.toString());
+                expect(getAlphas().addrs).to.include.members(possibleAuthors, "All validators are alphas");
+                expect(getBetas().addrs).not.to.include(possibleAuthors, "But not betas");
             }
         });
     });
@@ -218,9 +210,7 @@ describe("Shutdown test", function() {
                 }))
             ],
             async onBeforeEnable(allNodes) {
-                for (const node of getValidators(allNodes).nodes) {
-                    await node.clean();
-                }
+                await Promise.all(getValidators(allNodes).nodes.map(node => node.clean()));
             }
         });
 
