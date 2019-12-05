@@ -827,8 +827,8 @@ pub fn read_preset_config() -> &'static str {
 
 pub fn load_config(matches: &clap::ArgMatches) -> Result<Config, String> {
     let mut config: Config = {
-        let toml_string = read_preset_config().to_string();
-        toml::from_str(toml_string.as_ref()).expect("The preset config file must be valid")
+        let toml_string = read_preset_config();
+        toml::from_str(toml_string).expect("The preset config file must be valid")
     };
 
     if let Some(config_path) = matches.value_of("config") {
