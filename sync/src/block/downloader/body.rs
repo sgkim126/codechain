@@ -17,7 +17,7 @@
 use super::super::message::RequestMessage;
 use ccore::UnverifiedTransaction;
 use ctypes::{BlockHash, Header};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Clone)]
 struct Target {
@@ -27,7 +27,7 @@ struct Target {
 
 #[derive(Default)]
 pub struct BodyDownloader {
-    targets: Vec<Target>,
+    targets: VecDeque<Target>,
     downloading: HashSet<BlockHash>,
     downloaded: HashMap<BlockHash, Vec<UnverifiedTransaction>>,
 }
@@ -73,7 +73,7 @@ impl BodyDownloader {
 
     pub fn add_target(&mut self, header: &Header, is_empty: bool) {
         cdebug!(SYNC, "Add download target: {}", header.hash());
-        self.targets.push(Target {
+        self.targets.push_back(Target {
             hash: header.hash(),
             is_empty,
         });
@@ -117,5 +117,17 @@ impl BodyDownloader {
         self.targets.drain(0..result.len());
         self.targets.shrink_to_fit();
         result
+    }
+
+    pub fn re_request(&mut self, hash: BlockHash, is_empty: bool, remains: Vec<(BlockHash, Vec<UnverifiedTransaction>)>) {
+        for (hash, transactions) in remains.into_iter().rev() {
+            self.targets.push_front(Target {
+                hash, is_empty: transactions.is_empty()
+            });
+            self.downloaded.insert(hash, transactions);
+        }
+        self.targets.push_front(Target {
+            hash, is_empty,
+        })
     }
 }
