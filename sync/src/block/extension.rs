@@ -711,7 +711,11 @@ impl Extension {
         {
             self.body_downloader.import_bodies(hashes, bodies);
             let completed = self.body_downloader.drain();
+            let mut has_error = false;
             for (hash, transactions) in completed {
+                if has_error {
+                    continue
+                }
                 let header = self
                     .client
                     .block_header(&BlockId::Hash(hash))
@@ -732,7 +736,8 @@ impl Extension {
                     Err(err) => {
                         // FIXME: handle import errors
                         cwarn!(SYNC, "Cannot import block({}): {:?}", hash, err);
-                        break
+                        has_error = true;
+                        continue
                     }
                     _ => {}
                 }
