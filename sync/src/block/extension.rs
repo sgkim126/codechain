@@ -27,7 +27,6 @@ use ctimer::TimerToken;
 use ctypes::header::{Header, Seal};
 use ctypes::transaction::Action;
 use ctypes::{BlockHash, BlockNumber};
-use merkle_trie::skewed_merkle_root;
 use primitives::{H256, U256};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -718,19 +717,6 @@ impl Extension {
                     .block_header(&BlockId::Hash(hash))
                     .expect("Downloaded body's header must exist")
                     .decode();
-                let parent_transactions_root = self
-                    .client
-                    .block_header(&(*header.parent_hash()).into())
-                    .expect("The parent header must exist")
-                    .view()
-                    .transactions_root();
-                let calculated_transactions_root =
-                    skewed_merkle_root(parent_transactions_root, transactions.iter().map(Encodable::rlp_bytes));
-                if *header.transactions_root() != calculated_transactions_root {
-                    cwarn!(SYNC, "Received corrupted body for ${}({}", header.number(), hash);
-                    break
-                }
-
                 let block = Block {
                     header,
                     transactions,
