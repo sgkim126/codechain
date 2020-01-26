@@ -37,16 +37,9 @@ impl BodyDownloader {
         const MAX_BODY_REQEUST_LENGTH: usize = 128;
         let mut hashes = Vec::new();
         for t in &self.targets {
-            if self.downloading.contains(&t.hash) {
-                continue
+            if !self.downloading.contains(&t.hash) && !self.downloaded.contains_key(&t.hash) {
+                hashes.push(t.hash);
             }
-            if self.downloaded.contains(&t.hash) {
-                continue
-            }
-            if t.is_empty {
-                continue
-            }
-            hashes.push(t.hash);
             if hashes.len() >= MAX_BODY_REQEUST_LENGTH {
                 break
             }
@@ -68,7 +61,6 @@ impl BodyDownloader {
                         cwarn!(SYNC, "Invalid body of {}. It should be not empty.", hash);
                         continue
                     }
-                    cwarn!(SYNC, "The current implementation doesn't send a request for an empty block, but it received the response.");
                 } else if target.is_empty {
                     cwarn!(SYNC, "Invalid body of {}. It should be empty.", hash);
                     continue
@@ -117,8 +109,6 @@ impl BodyDownloader {
         for t in &self.targets {
             if let Some(body) = self.downloaded.remove(&t.hash) {
                 result.push((t.hash, body));
-            } else if t.is_empty {
-                result.push((t.hash, Default::default()));
             } else {
                 break
             }
