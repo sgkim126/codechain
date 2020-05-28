@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Kodebox, Inc.
+// Copyright 2018-2020 Kodebox, Inc.
 // This file is part of CodeChain.
 //
 // This program is free software: you can redistribute it and/or modify
@@ -113,11 +113,8 @@ struct SealingWork {
     enabled: bool,
 }
 
-type TransactionListener = Box<dyn Fn(&[TxHash]) + Send + Sync>;
-
 pub struct Miner {
     mem_pool: Arc<RwLock<MemPool>>,
-    transaction_listener: RwLock<Vec<TransactionListener>>,
     next_allowed_reseal: Mutex<Instant>,
     next_mandatory_reseal: RwLock<Instant>,
     sealing_block_last_request: Mutex<u64>,
@@ -176,7 +173,6 @@ impl Miner {
 
         Self {
             mem_pool,
-            transaction_listener: RwLock::new(vec![]),
             next_allowed_reseal: Mutex::new(Instant::now()),
             next_mandatory_reseal: RwLock::new(Instant::now() + options.reseal_max_period),
             params: RwLock::new(AuthoringParams::default()),
@@ -197,11 +193,6 @@ impl Miner {
 
     pub fn recover_from_db(&self, client: &Client) {
         self.mem_pool.write().recover_from_db(client);
-    }
-
-    /// Set a callback to be notified about imported transactions' hashes.
-    pub fn add_transactions_listener(&self, f: Box<dyn Fn(&[TxHash]) + Send + Sync>) {
-        self.transaction_listener.write().push(f);
     }
 
     /// Get `Some` `clone()` of the current pending block's state or `None` if we're not sealing.
@@ -364,10 +355,6 @@ impl Miner {
                 }
             })
             .collect();
-
-        for listener in &*self.transaction_listener.read() {
-            listener(&inserted);
-        }
 
         results
     }
